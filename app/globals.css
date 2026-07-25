@@ -455,3 +455,64 @@ body {
   font-weight: 600;
   color: #52525b;
 }
+
+/* --- Mobile Responsive --- */
+@media (max-width: 768px) {
+  .container {
+    padding: 16px 12px 60px;
+  }
+
+  .project-settings {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .page-card {
+    padding: 12px;
+  }
+
+  .upload-zone {
+    padding: 12px;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .upload-preview img,
+  .upload-preview video {
+    max-height: 280px;
+    width: 100%;
+  }
+
+  .app-header h1 {
+    font-size: 20px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 12px 8px 40px;
+  }
+
+  .app-header h1 {
+    font-size: 18px;
+  }
+
+  .project-settings {
+    padding: 12px;
+  }
+
+  .toolbar {
+    flex-direction: column;
+  }
+
+  .toolbar button {
+    width: 100%;
+  }
+}
