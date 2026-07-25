@@ -17,6 +17,7 @@ export interface SafeUser {
   email: string;
   name: string | null;
   role: Role;
+  created_at: string;
 }
 
 const pool = new Pool({
@@ -67,7 +68,7 @@ export async function createUser(params: {
 
 export async function listUsers(): Promise<SafeUser[]> {
   await ensureUsersTable();
-  const result = await pool.query('SELECT id, email, name, role FROM users ORDER BY created_at DESC');
+  const result = await pool.query('SELECT id, email, name, role, created_at FROM users ORDER BY created_at DESC');
   return result.rows;
 }
 
