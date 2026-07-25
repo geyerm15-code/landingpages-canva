@@ -1,7 +1,6 @@
-import { sql } from "@vercel/postgres";
-import { randomUUID } from "crypto";
+import { Pool } from 'pg';
 
-export type Role = "admin" | "user";
+export type Role = 'admin' | 'user';
 
 export interface DbUser {
   id: string;
@@ -10,7 +9,6 @@ export interface DbUser {
   name: string | null;
   role: Role;
   created_at: string;
-  /** Requerido por @vercel/postgres: sql<T> exige que T extienda QueryResultRow */
   [key: string]: unknown;
 }
 
@@ -19,40 +17,38 @@ export interface SafeUser {
   email: string;
   name: string | null;
   role: Role;
-  created_at: string;
-  [key: string]: unknown;
 }
 
-let tableEnsured = false;
+const pool = new Pool({
+  connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL,
+});
 
-/** Crea la tabla si no existe. Se llama antes de cada query, es idempotente. */
-async function ensureUsersTable() {
-  if (tableEnsured) return;
-  await sql`
+export async function ensureUsersTable(): Promise<void> {
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      email TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      name TEXT,
-      role TEXT NOT NULL DEFAULT 'user',
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-  `;
-  tableEnsured = true;
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password_hash VARCHAR(255) NOT NULL,
+      name VARCHAR(255),
+      role VARCHAR(50) DEFAULT 'user',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 }
 
 export async function getUserByEmail(email: string): Promise<DbUser | null> {
   await ensureUsersTable();
-  const { rows } = await sql<DbUser>`
-    SELECT * FROM users WHERE email = ${email.toLowerCase().trim()} LIMIT 1;
-  `;
-  return rows[0] ?? null;
+  const result = await pool.query(
+    'SELECT * FROM users WHERE email = $1 LIMIT 1',
+    [email.toLowerCase().trim()]
+  );
+  return result.rows[0] ?? null;
 }
 
 export async function countUsers(): Promise<number> {
   await ensureUsersTable();
-  const { rows } = await sql<{ count: string; [key: string]: unknown }>`SELECT COUNT(*)::text as count FROM users;`;
-  return Number(rows[0]?.count ?? 0);
+  const result = await pool.query('SELECT COUNT(*)::text as count FROM users');
+  return Number(result.rows[0]?.count ?? 0);
 }
 
 export async function createUser(params: {
@@ -62,24 +58,19 @@ export async function createUser(params: {
   role: Role;
 }): Promise<DbUser> {
   await ensureUsersTable();
-  const id = randomUUID();
-  const { rows } = await sql<DbUser>`
-    INSERT INTO users (id, email, password_hash, name, role)
-    VALUES (${id}, ${params.email.toLowerCase().trim()}, ${params.passwordHash}, ${params.name ?? null}, ${params.role})
-    RETURNING *;
-  `;
-  return rows[0];
+  const result = await pool.query(
+    'INSERT INTO users (email, password_hash, name, role) VALUES ($1, $2, $3, $4) RETURNING *',
+    [params.email.toLowerCase().trim(), params.passwordHash, params.name ?? null, params.role]
+  );
+  return result.rows[0];
 }
 
 export async function listUsers(): Promise<SafeUser[]> {
   await ensureUsersTable();
-  const { rows } = await sql<SafeUser>`
-    SELECT id, email, name, role, created_at FROM users ORDER BY created_at DESC;
-  `;
-  return rows;
+  const result = await pool.query('SELECT id, email, name, role FROM users ORDER BY created_at DESC');
+  return result.rows;
 }
 
-export async function deleteUser(id: string): Promise<void> {
-  await ensureUsersTable();
-  await sql`DELETE FROM users WHERE id = ${id};`;
+export async function deleteUser(userId: string): Promise<void> {
+  await pool.query('DELETE FROM users WHERE id = $1', [userId]);
 }
