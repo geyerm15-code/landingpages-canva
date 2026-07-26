@@ -161,7 +161,7 @@ export function generateElementorJSON(project: ProjectState) {
   return {
     version: "1.0.0",
     title: project.title,
-    type: "wp-post",
+    type: "page",
     content,
   };
 }
