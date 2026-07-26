@@ -98,6 +98,8 @@ function buildDeviceContainer(
     content_width: "full",
     flex_direction: "column",
     flex_justify_content: "flex-end",
+    width: { unit: "%", size: "100" },
+    height: device === "mobile" ? { unit: "px", size: "700" } : { unit: "px", size: "1120" },
     background_background: "classic",
     background_color: "#000000",
     padding: ZERO_SPACING,
