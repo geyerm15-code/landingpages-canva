@@ -11,14 +11,25 @@ export interface MediaAsset {
   previewUrl?: string;
 }
 
+export interface ButtonConfig {
+  enabled: boolean;
+  text: string;
+  link: string;
+  bgColor: string;
+  borderColor: string;
+  textColor: string;
+  shadowIntensity: number; // 0-100
+  shadowTransparency: number; // 0-100
+  positionX: number; // % o px
+  positionY: number; // % o px
+}
+
 export interface PageSection {
   id: string;
   order: number;
   mobile?: MediaAsset;
   desktop?: MediaAsset;
-  addButton: boolean;
-  buttonText: string;
-  buttonLink: string;
+  button: ButtonConfig;
 }
 
 export interface ProjectState {
@@ -34,9 +45,9 @@ export interface ProjectState {
 }
 
 /**
- * Credenciales de Cloudinary. OJO: solo Cloud Name + Upload Preset
- * (unsigned). Nunca se guarda API Secret acá — ver components/CloudinarySettings.tsx
- */
+* Credenciales de Cloudinary. OJO: solo Cloud Name + Upload Preset
+* (unsigned). Nunca se guarda API Secret acá — ver components/CloudinarySettings.tsx
+*/
 export interface CloudinaryConfig {
   cloudName: string;
   uploadPreset: string;
@@ -46,9 +57,18 @@ export function createEmptyPage(order: number): PageSection {
   return {
     id: crypto.randomUUID(),
     order,
-    addButton: false,
-    buttonText: "AGENDA TU CITA",
-    buttonLink: "",
+    button: {
+      enabled: false,
+      text: "ENTRAR EN CONTACTO",
+      link: "",
+      bgColor: "#10b981",
+      borderColor: "#10b981",
+      textColor: "#ffffff",
+      shadowIntensity: 43,
+      shadowTransparency: 50,
+      positionX: 50,
+      positionY: 80,
+    },
   };
 }
 

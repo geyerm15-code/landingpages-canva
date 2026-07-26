@@ -1,7 +1,8 @@
 "use client";
 
 import UploadZone from "./UploadZone";
-import type { PageSection, MediaAsset, UploadMode, CloudinaryConfig } from "@/lib/types";
+import ButtonEditor from "./ButtonEditor";
+import type { PageSection, MediaAsset, UploadMode, CloudinaryConfig, ButtonConfig } from "@/lib/types";
 
 interface PageCardProps {
   page: PageSection;
@@ -26,6 +27,10 @@ export default function PageCard({
 }: PageCardProps) {
   function setAsset(device: "mobile" | "desktop", asset: MediaAsset | undefined) {
     onUpdate({ ...page, [device]: asset });
+  }
+
+  function updateButton(button: ButtonConfig) {
+    onUpdate({ ...page, button });
   }
 
   return (
@@ -62,33 +67,10 @@ export default function PageCard({
         />
       </div>
 
-      <div className="page-card-footer">
-        <label className="checkbox-row">
-          <input
-            type="checkbox"
-            checked={page.addButton}
-            onChange={(e) => onUpdate({ ...page, addButton: e.target.checked })}
-          />
-          Agregar botón sobre esta sección
-        </label>
-
-        {page.addButton && (
-          <div className="button-fields">
-            <input
-              type="text"
-              placeholder="Texto del botón"
-              value={page.buttonText}
-              onChange={(e) => onUpdate({ ...page, buttonText: e.target.value })}
-            />
-            <input
-              type="text"
-              placeholder="Link (https://wa.me/... o URL)"
-              value={page.buttonLink}
-              onChange={(e) => onUpdate({ ...page, buttonLink: e.target.value })}
-            />
-          </div>
-        )}
-      </div>
+      <ButtonEditor 
+        page={page} 
+        onUpdate={updateButton}
+      />
     </div>
   );
 }
