@@ -1,30 +1,40 @@
 import type { PageSection, ProjectState, ButtonConfig } from "./types";
 import { optimizedUrl } from "./cloudinary";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function randomId(): number {
-  return Math.floor(1000000000 + Math.random() * 8999999999);
+function randomId(): string {
+  return Math.random().toString(36).substring(2, 10);
 }
 
-const ZERO_SPACING = {
-  unit: "px",
-  top: "0",
-  right: "0",
-  bottom: "0",
-  left: "0",
-  isLinked: false,
-};
+function buildMediaWidget(page: PageSection, device: "mobile" | "desktop", quality: number) {
+  const asset = device === "mobile" ? page.mobile : page.desktop;
+  if (!asset) return null;
 
-function px(size: number) {
-  return { unit: "px", size };
+  let html = "";
+
+  if (asset.type === "image") {
+    const url = optimizedUrl(asset.url, quality);
+    html = `<div class="media-container" style="width:100%;height:100%;overflow:hidden;">
+  <img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">
+</div>`;
+  } else if (asset.type === "video") {
+    html = `<div class="media-container" style="width:100%;height:100%;overflow:hidden;background:#000;">
+  <video autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;display:block;">
+    <source src="${asset.url}" type="video/mp4">
+  </video>
+</div>`;
+  }
+
+  return {
+    id: randomId(),
+    elType: "widget",
+    widgetType: "html",
+    settings: {
+      html,
+    },
+    elements: [],
+    isInner: false,
+  };
 }
-
-// ---------------------------------------------------------------------------
-// Widgets
-// ---------------------------------------------------------------------------
 
 function buildButtonWidget(buttonConfig: ButtonConfig) {
   if (!buttonConfig.enabled) return null;
@@ -50,78 +60,51 @@ function buildButtonWidget(buttonConfig: ButtonConfig) {
         spread: 0,
         color: `rgba(0,0,0,${buttonConfig.shadowTransparency / 100})`,
       },
-      _margin: {
-        unit: "px",
-        top: `${buttonConfig.positionY}%`,
-        right: "auto",
-        bottom: "auto",
-        left: `${buttonConfig.positionX}%`,
-        isLinked: false,
-      },
+      _position: "absolute",
+      _offset_x: { unit: "%", size: buttonConfig.positionX },
+      _offset_y: { unit: "%", size: buttonConfig.positionY },
     },
     elements: [],
     isInner: false,
   };
 }
 
-function buildWhatsappWidget(link: string) {
-  const html = `<a href="${link}" target="_blank" rel="noopener" class="wa-float">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp">
-</a>
-<style>
-.wa-float{position:fixed;right:20px;bottom:20px;width:56px;height:56px;z-index:999;display:block;}
-.wa-float img{width:100%;height:100%;}
-</style>`;
-  return {
-    id: randomId(),
-    elType: "widget",
-    widgetType: "html",
-    settings: { html },
-    elements: [],
-    isInner: false,
-  };
-}
+function buildPageContainer(page: PageSection, device: "mobile" | "desktop", quality: number) {
+  const mediaWidget = buildMediaWidget(page, device, quality);
+  if (!mediaWidget) return null;
 
-// ---------------------------------------------------------------------------
-// Container por página/dispositivo
-// ---------------------------------------------------------------------------
-
-function buildDeviceContainer(
-  page: PageSection,
-  device: "mobile" | "desktop",
-  quality: number
-) {
-  const asset = device === "mobile" ? page.mobile : page.desktop;
-  if (!asset) return null;
-
-  const settings: Record<string, unknown> = {
-    content_width: "full",
-    flex_direction: "column",
-    flex_justify_content: "flex-end",
-    width: { unit: "%", size: "100" },
-    height: device === "mobile" ? { unit: "px", size: "700" } : { unit: "px", size: "1120" },
-    background_background: "classic",
-    background_color: "#000000",
-    padding: ZERO_SPACING,
-    margin: ZERO_SPACING,
-  };
-
-  if (asset.type === "image") {
-    settings.background_image = {
-      id: 0,
-      url: optimizedUrl(asset.url, quality),
-    };
-    settings.background_size = "cover";
-    settings.background_position = "center center";
-  } else if (asset.type === "video") {
-    settings.background_video_link = asset.url;
-  }
-
-  const elements: unknown[] = [];
+  const elements: unknown[] = [mediaWidget];
 
   const buttonWidget = buildButtonWidget(page.button);
   if (buttonWidget) {
     elements.push(buttonWidget);
+  }
+
+  const settings: Record<string, unknown> = {
+    width: { unit: "%", size: "100" },
+    height: device === "mobile" ? { unit: "px", size: "700" } : { unit: "px", size: "1120" },
+    padding: {
+      unit: "px",
+      top: "0",
+      right: "0",
+      bottom: "0",
+      left: "0",
+      isLinked: false,
+    },
+    margin: {
+      unit: "px",
+      top: "0",
+      right: "0",
+      bottom: "0",
+      left: "0",
+      isLinked: false,
+    },
+  };
+
+  if (device === "desktop") {
+    settings.hide_mobile = "hidden-mobile";
+  } else {
+    settings.hide_desktop = "hidden-desktop";
   }
 
   return {
@@ -133,38 +116,25 @@ function buildDeviceContainer(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Documento completo
-// ---------------------------------------------------------------------------
-
 export function generateElementorJSON(project: ProjectState) {
   const content: unknown[] = [];
 
   const sortedPages = [...project.pages].sort((a, b) => a.order - b.order);
 
   for (const page of sortedPages) {
-    const mobileContainer = buildDeviceContainer(page, "mobile", project.qualityMobile);
-    const desktopContainer = buildDeviceContainer(page, "desktop", project.qualityDesktop);
+    const mobileContainer = buildPageContainer(page, "mobile", project.qualityMobile);
+    const desktopContainer = buildPageContainer(page, "desktop", project.qualityDesktop);
+
     if (mobileContainer) content.push(mobileContainer);
     if (desktopContainer) content.push(desktopContainer);
   }
 
-  if (project.whatsappLink) {
-    content.push({
-      id: randomId(),
-      elType: "widget",
-      widgetType: "html",
-      settings: {},
-      elements: [buildWhatsappWidget(project.whatsappLink)],
-      isInner: false,
-    });
-  }
-
   return {
-    version: "1.0.0",
-    title: project.title,
+    version: "0.4",
+    title: project.title || "Landing Page",
     type: "page",
     content,
+    page_settings: [],
   };
 }
 
@@ -173,8 +143,16 @@ export function downloadElementorJSON(project: ProjectState) {
   const blob = new Blob([JSON.stringify(json, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
+  const slug = (project.title || "landing-page")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
   a.href = url;
-  a.download = `${project.title.replace(/\s+/g, "-").toLowerCase()}.json`;
+  a.download = `${slug || "landing-page"}.json`;
+  document.body.appendChild(a);
   a.click();
+  a.remove();
   URL.revokeObjectURL(url);
 }
