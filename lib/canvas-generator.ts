@@ -1,117 +1,101 @@
-export function generateCanvasHTML(frameUrls: string[], containerId: string): string {
+export function generateCanvasHTML(frameUrls: string[], containerId: string, isDesktop: boolean): string {
+  const PX = isDesktop ? 20 : 12; // pixels per frame
+  
   return `<style>
-#${containerId}{
-  position:relative;
-  width:100vw;
-  margin-left:calc(-50vw + 50%);
-  height:100svh;
-  overflow:hidden;
-  background:#000;
-  touch-action:pan-y;
-  scroll-snap-align:start;
-  scroll-snap-stop:always;
+#${containerId}-outer{
+  position: relative;
+  width: 100%;
+  margin: 0;
+  height: ${frameUrls.length * PX + 100}vh;
+}
+#${containerId}-sticky{
+  position: sticky;
+  top: 0;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
 }
 #${containerId}-canvas{
-  width:100%;
-  height:100%;
-  display:block;
+  width: 100%;
+  height: 100%;
+  display: block;
 }
-.elementor-widget-html,.elementor-widget-container{margin:0!important;padding:0!important;line-height:0!important;}
+.elementor-widget-html, .elementor-widget-container {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 0 !important;
+}
 </style>
-<div id="${containerId}">
-  <canvas id="${containerId}-canvas"></canvas>
+<div id="${containerId}-outer">
+  <div id="${containerId}-sticky">
+    <canvas id="${containerId}-canvas"></canvas>
+  </div>
 </div>
 <script>
 (function(){
-  var frames=${JSON.stringify(frameUrls)};
-  var outer=document.getElementById('${containerId}');
-  var canvas=document.getElementById('${containerId}-canvas');
-  var ctx=canvas.getContext('2d');
-  var images=[];
-  var currentFrame=0;
-  var totalFrames=frames.length;
-  
+  var frames = ${JSON.stringify(frameUrls)};
+  var PX = ${PX};
+  var outer = document.getElementById('${containerId}-outer');
+  var sticky = document.getElementById('${containerId}-sticky');
+  var canvas = document.getElementById('${containerId}-canvas');
+  var ctx = canvas.getContext('2d');
+  var images = [];
+  var currentFrame = 0;
+  var ticking = false;
+
   function resize(){
-    var FW=outer.offsetWidth;
-    var FH=outer.offsetHeight;
-    canvas.width=FW;
-    canvas.height=FH;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
     draw(currentFrame);
   }
-  
+
   function draw(idx){
-    var img=images[idx];
-    if(!img||!img.complete||!img.naturalWidth)return;
-    var FW=canvas.width;
-    var FH=canvas.height;
-    var s=Math.max(FW/img.naturalWidth,FH/img.naturalHeight);
-    ctx.clearRect(0,0,FW,FH);
-    ctx.drawImage(img,(FW-img.naturalWidth*s)/2,(FH-img.naturalHeight*s)/2,img.naturalWidth*s,img.naturalHeight*s);
+    var img = images[idx];
+    if(!img || !img.complete || !img.naturalWidth) return;
+    var s = Math.max(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, (canvas.width - img.naturalWidth * s) / 2, (canvas.height - img.naturalHeight * s) / 2, img.naturalWidth * s, img.naturalHeight * s);
   }
-  
-  function setFrame(f){
-    if(f<0)f=0;
-    if(f>=totalFrames)f=totalFrames-1;
-    currentFrame=f;
-    draw(f);
+
+  function update(){
+    ticking = false;
+    var scrolled = -outer.getBoundingClientRect().top;
+    if(scrolled < 0) scrolled = 0;
+    var idx = Math.min(Math.floor(scrolled / PX), frames.length - 1);
+    if(idx !== currentFrame){
+      currentFrame = idx;
+      draw(currentFrame);
+    }
   }
-  
-  window.__fsPlayers=window.__fsPlayers||{};
-  window.__fsPlayers['${containerId}']={outer:outer,totalFrames:totalFrames,setFrame:setFrame,getFrame:function(){return currentFrame;}};
-  
-  outer.addEventListener('touchstart',function(e){
-    var c=window.__fsCoord;
-    c.activeId='${containerId}';
-    c.baseY=e.touches[0].clientY;
-    c.baseFrame=currentFrame;
-  },{passive:true});
-  
-  if(!window.__fsCoordInit){
-    window.__fsCoordInit=true;
-    window.__fsCoord={activeId:null,baseY:0,baseFrame:0};
-    var SENSITIVITY=12;
-    document.addEventListener('touchmove',function(e){
-      var c=window.__fsCoord;
-      if(!c.activeId)return;
-      var p=window.__fsPlayers[c.activeId];
-      if(!p)return;
-      var dy=c.baseY-e.touches[0].clientY;
-      var delta=Math.round(dy/SENSITIVITY);
-      var idx=c.baseFrame+delta;
-      if(idx>=p.totalFrames){
-        e.preventDefault();
-        p.setFrame(p.totalFrames-1);
-        return;
-      }
-      if(idx<0){
-        e.preventDefault();
-        p.setFrame(0);
-        return;
-      }
-      e.preventDefault();
-      p.setFrame(idx);
-    },{passive:false});
-    document.addEventListener('touchend',function(){
-      window.__fsCoord.activeId=null;
-    },{passive:true});
-  }
-  
-  var framesLoaded=false;
-  function isVisible(){return outer.offsetParent!==null;}
+
+  window.addEventListener('scroll', function(){
+    if(!ticking){
+      requestAnimationFrame(update);
+      ticking = true;
+    }
+  }, {passive: true});
+
+  var framesLoaded = false;
+  function isVisible(){ return outer.offsetParent !== null; }
   function loadFrames(){
-    if(framesLoaded)return;
-    framesLoaded=true;
-    for(var i=0;i<totalFrames;i++){(function(i){
-      var img=new Image();
-      img.onload=function(){if(i===currentFrame)draw(currentFrame);};
-      img.src=frames[i];
-      images[i]=img;
-    })(i);}
+    if(framesLoaded) return;
+    framesLoaded = true;
+    for(var i = 0; i < frames.length; i++){
+      (function(i){
+        var img = new Image();
+        img.onload = function(){ if(i === currentFrame) draw(currentFrame); };
+        img.src = frames[i];
+        images[i] = img;
+      })(i);
+    }
   }
-  function checkLoad(){if(isVisible())loadFrames();}
-  window.addEventListener('resize',function(){resize();checkLoad();});
+  function checkLoad(){ if(isVisible()) loadFrames(); }
+  
+  window.addEventListener('resize', function(){ resize(); checkLoad(); });
   resize();
-  if(document.readyState==='complete'){checkLoad();}else{window.addEventListener('load',checkLoad);}
+  if(document.readyState === 'complete'){ checkLoad(); } else { window.addEventListener('load', checkLoad); }
 })();
 </script>`;
 }
