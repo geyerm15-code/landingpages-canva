@@ -2,6 +2,7 @@
 
 import UploadZone from "./UploadZone";
 import ButtonEditor from "./ButtonEditor";
+import VideoFrameExtractor from "./VideoFrameExtractor";
 import type { PageSection, MediaAsset, UploadMode, CloudinaryConfig, ButtonConfig } from "@/lib/types";
 
 interface PageCardProps {
@@ -33,6 +34,13 @@ export default function PageCard({
     onUpdate({ ...page, button });
   }
 
+  function handleFramesReady(frameUrls: string[]) {
+    onUpdate({ ...page, frameUrls });
+  }
+
+  const hasMobileVideo = page.mobile?.type === "video";
+  const hasDesktopVideo = page.desktop?.type === "video";
+
   return (
     <div className="page-card">
       <div className="page-card-header">
@@ -58,6 +66,14 @@ export default function PageCard({
           cloudinaryConfig={cloudinaryConfig}
           onChange={(asset) => setAsset("mobile", asset)}
         />
+        {hasMobileVideo && page.mobile && (
+          <VideoFrameExtractor
+            video={page.mobile}
+            cloudinaryConfig={cloudinaryConfig}
+            onFramesReady={handleFramesReady}
+          />
+        )}
+
         <UploadZone
           label="Versión desktop"
           asset={page.desktop}
@@ -65,6 +81,13 @@ export default function PageCard({
           cloudinaryConfig={cloudinaryConfig}
           onChange={(asset) => setAsset("desktop", asset)}
         />
+        {hasDesktopVideo && page.desktop && (
+          <VideoFrameExtractor
+            video={page.desktop}
+            cloudinaryConfig={cloudinaryConfig}
+            onFramesReady={handleFramesReady}
+          />
+        )}
       </div>
 
       <ButtonEditor 
