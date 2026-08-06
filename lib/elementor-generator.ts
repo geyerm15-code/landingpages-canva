@@ -14,7 +14,7 @@ function buildMediaWidget(page: PageSection, device: "mobile" | "desktop", quali
 
   // Si tiene frames (video con scroll), usar canvas
   if (asset.type === "video" && page.frameUrls && page.frameUrls.length > 0) {
-    html = generateCanvasHTML(page.frameUrls, `fs-${device}-${page.id}`);
+    html = generateCanvasHTML(page.frameUrls, `fs--`, device === "desktop");
   } else if (asset.type === "image") {
     const url = optimizedUrl(asset.url, quality);
     html = `<div class="media-container" style="width:100%;height:100%;overflow:hidden;">
