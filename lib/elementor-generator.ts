@@ -1,5 +1,6 @@
 import type { PageSection, ProjectState, ButtonConfig } from "./types";
 import { optimizedUrl } from "./cloudinary";
+import { generateCanvasHTML } from "./canvas-generator";
 
 function randomId(): string {
   return Math.random().toString(36).substring(2, 10);
@@ -11,7 +12,10 @@ function buildMediaWidget(page: PageSection, device: "mobile" | "desktop", quali
 
   let html = "";
 
-  if (asset.type === "image") {
+  // Si tiene frames (video con scroll), usar canvas
+  if (asset.type === "video" && page.frameUrls && page.frameUrls.length > 0) {
+    html = generateCanvasHTML(page.frameUrls, `fs-${device}-${page.id}`);
+  } else if (asset.type === "image") {
     const url = optimizedUrl(asset.url, quality);
     html = `<div class="media-container" style="width:100%;height:100%;overflow:hidden;">
   <img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">
