@@ -1,12 +1,13 @@
 export function generateCanvasHTML(frameUrls: string[], containerId: string, isDesktop: boolean): string {
-  const PX = isDesktop ? 20 : 12; // pixels per frame
+  const PX = isDesktop ? 20 : 12;
+  const totalHeight = Math.ceil((frameUrls.length * PX) / 10); // Dividir por 10 para no ser tan gigante
   
   return `<style>
 #${containerId}-outer{
   position: relative;
   width: 100%;
   margin: 0;
-  height: ${frameUrls.length * PX + 100}vh;
+  height: ${totalHeight}vh;
 }
 #${containerId}-sticky{
   position: sticky;
